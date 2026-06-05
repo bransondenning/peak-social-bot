@@ -4,30 +4,25 @@ import random
 import os
 from datetime import datetime
 
-ANTHROPIC_API_KEY        = os.environ.get("ANTHROPIC_API_KEY")
-MAKE_WEBHOOK_URL         = os.environ.get("MAKE_WEBHOOK_URL")          # single image
-MAKE_CAROUSEL_WEBHOOK_URL = os.environ.get("MAKE_CAROUSEL_WEBHOOK_URL") # before/after carousel
+ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
+MAKE_WEBHOOK_URL  = os.environ.get("MAKE_WEBHOOK_URL")
 
-# Single photos — rotated randomly for regular posts
-PHOTOS = [
-    "https://peakpropertycleanouts.com/assets/hero.jpg",
-    "https://peakpropertycleanouts.com/assets/rig.jpg",
-    "https://peakpropertycleanouts.com/assets/ba1-after.jpg",
-    "https://peakpropertycleanouts.com/assets/ba2-after.jpg",
-    "https://peakpropertycleanouts.com/assets/result-yard.jpg",
-    "https://peakpropertycleanouts.com/assets/result-room.jpg",
-]
-
-# Before/after pairs — used for carousel posts
-BEFORE_AFTER_PAIRS = [
-    [
-        "https://peakpropertycleanouts.com/assets/ba1-before.jpg",
-        "https://peakpropertycleanouts.com/assets/ba1-after.jpg",
-    ],
-    [
-        "https://peakpropertycleanouts.com/assets/ba2-before.jpg",
-        "https://peakpropertycleanouts.com/assets/ba2-after.jpg",
-    ],
+# Image pairs — always 2 images per post (before/after or job combos)
+IMAGE_PAIRS = [
+    # Before/after pairs
+    ("https://peakpropertycleanouts.com/assets/ba1-before.jpg",
+     "https://peakpropertycleanouts.com/assets/ba1-after.jpg"),
+    ("https://peakpropertycleanouts.com/assets/ba2-before.jpg",
+     "https://peakpropertycleanouts.com/assets/ba2-after.jpg"),
+    # Job photo pairs
+    ("https://peakpropertycleanouts.com/assets/hero.jpg",
+     "https://peakpropertycleanouts.com/assets/rig.jpg"),
+    ("https://peakpropertycleanouts.com/assets/result-yard.jpg",
+     "https://peakpropertycleanouts.com/assets/result-room.jpg"),
+    ("https://peakpropertycleanouts.com/assets/ba1-after.jpg",
+     "https://peakpropertycleanouts.com/assets/hero.jpg"),
+    ("https://peakpropertycleanouts.com/assets/ba2-after.jpg",
+     "https://peakpropertycleanouts.com/assets/rig.jpg"),
 ]
 
 BUSINESS_CONTEXT = """
@@ -67,46 +62,37 @@ TAGLINES:
   "Faster, cleaner, more reliable or you don't pay a dime."
 """
 
-SINGLE_POST_ANGLES = [
+POST_ANGLES = [
+    "before/after transformation — the space went from chaos to completely clean",
     "pricing comparison — we charge $425, national chains charge $600-850 for the same haul",
     "same-day urgency — slots fill fast, text today and it's gone today",
     "teen-owned local business story — 16-year-old founder, hardworking East Idaho crew",
+    "garage cleanout — most satisfying job, before and after are unrecognizable",
     "flat-rate pricing relief — no surprise fees, one price covers everything",
     "construction debris removal — contractors and homeowners both welcome",
     "repeat customer or referral deal — 20% off, 10% cash referral with no cap",
     "appliance removal — fridge, washer, dryer, no problem",
     "local East Idaho community focus — Rigby, Idaho Falls, Rexburg, Ammon area",
     "5-star review highlight — lead with a real customer quote",
-    "yard waste and outdoor cleanup — spring/summer season angle",
-    "estate or foreclosure cleanout — sensitive, fast, professional",
+    "estate or foreclosure cleanout — respectful, fast, professional",
     "property manager/landlord deal — 20% off for life after first job",
-]
-
-BEFORE_AFTER_ANGLES = [
-    "dramatic before/after transformation — the space went from chaos to clean",
-    "before/after room cleanout — what we hauled out and how it looks now",
-    "before/after garage cleanout — reclaim your space",
-    "before/after estate cleanout — respectful, fast, thorough",
+    "yard waste and outdoor cleanup — spring/summer angle",
+    "moving cleanout — people are shocked how much they left behind",
 ]
 
 
-def generate_post(angle, post_type="single"):
+def generate_post(angle):
     client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
     day = datetime.now().strftime("%A")
-
-    if post_type == "carousel":
-        extra = "This post will show a before/after photo slider. Reference the transformation."
-    else:
-        extra = ""
 
     prompt = f"""Write a Facebook/Instagram post for Peak Property Cleanouts.
 
 Angle: {angle}
 Day: {day}
-{extra}
 
 Rules:
 - 3-5 sentences, punchy and local-sounding — NOT corporate
+- Reference a before/after transformation or visual result where natural
 - End with a clear call to action (text us, call, visit site)
 - Add 5-8 relevant hashtags on a new line at the end
 - Max 2 emojis total
@@ -129,39 +115,19 @@ def main():
     print("Peak Property Cleanouts Social Bot")
     print(datetime.now().strftime("%Y-%m-%d %H:%M UTC"))
 
-    # 30% chance of a before/after carousel post, 70% regular single image
-    do_carousel = (
-        MAKE_CAROUSEL_WEBHOOK_URL
-        and len(BEFORE_AFTER_PAIRS) > 0
-        and random.random() < 0.30
+    angle  = random.choice(POST_ANGLES)
+    text   = generate_post(angle)
+    image1, image2 = random.choice(IMAGE_PAIRS)
+
+    print(f"\n--- POST ---\n{text}\n------------")
+    print(f"Image 1: {image1}")
+    print(f"Image 2: {image2}")
+
+    print("\nSending to Make.com...")
+    resp = requests.post(
+        MAKE_WEBHOOK_URL,
+        json={"text": text, "image1": image1, "image2": image2}
     )
-
-    if do_carousel:
-        print("\nPost type: Before/After Carousel")
-        pair   = random.choice(BEFORE_AFTER_PAIRS)
-        angle  = random.choice(BEFORE_AFTER_ANGLES)
-        text   = generate_post(angle, post_type="carousel")
-        print(f"\n--- POST ---\n{text}\n------------")
-        print(f"Images: {pair}")
-
-        print("\nSending carousel to Make.com...")
-        resp = requests.post(
-            MAKE_CAROUSEL_WEBHOOK_URL,
-            json={"text": text, "images": pair}
-        )
-    else:
-        print("\nPost type: Single Image")
-        angle     = random.choice(SINGLE_POST_ANGLES)
-        text      = generate_post(angle, post_type="single")
-        image_url = random.choice(PHOTOS)
-        print(f"\n--- POST ---\n{text}\n------------")
-        print(f"Photo: {image_url}")
-
-        print("\nSending to Make.com...")
-        resp = requests.post(
-            MAKE_WEBHOOK_URL,
-            json={"text": text, "image_url": image_url}
-        )
 
     if resp.status_code == 200:
         print("Posted successfully to Facebook + Instagram!")
