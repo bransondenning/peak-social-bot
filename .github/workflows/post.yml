@@ -2,7 +2,11 @@ name: Post Social Media Content
 
 on:
   schedule:
-    - cron: '0 16 * * *'   # 9:00 AM Mountain Time (MDT = UTC-7)
+    - cron: '0 14 * * *'   # 8:00 AM Mountain Time (MDT)
+    - cron: '0 17 * * *'   # 11:00 AM Mountain Time
+    - cron: '0 20 * * *'   # 2:00 PM Mountain Time
+    - cron: '0 23 * * *'   # 5:00 PM Mountain Time
+    - cron: '0 2 * * *'    # 8:00 PM Mountain Time
   workflow_dispatch:         # allows manual "Run workflow" button in GitHub
 
 jobs:
@@ -23,4 +27,5 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           MAKE_WEBHOOK_URL: ${{ secrets.MAKE_WEBHOOK_URL }}
+          MAKE_CAROUSEL_WEBHOOK_URL: ${{ secrets.MAKE_CAROUSEL_WEBHOOK_URL }}
         run: python bot.py
